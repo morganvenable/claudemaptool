@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Map Country Selector</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+  }
+  .app {
+    display: flex;
+    height: 100vh;
+  }
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .sidebar-header h1 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #1a1a2e;
+  }
+  .search-box {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus {
+    border-color: #4CAF50;
+  }
+  .sidebar-actions {
+    padding: 8px 16px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sidebar-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sidebar-actions button:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+  }
+  .sidebar-actions button.primary {
+    background: #4CAF50;
+    color: #fff;
+    border-color: #4CAF50;
+  }
+  .sidebar-actions button.primary:hover {
+    background: #43a047;
+  }
+  .country-count {
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #888;
+    border-bottom: 1px solid #eee;
+  }
+  .country-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .country-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .country-item:hover {
+    background: #f5f5f5;
+  }
+  .country-item.selected {
+    background: #e8f5e9;
+  }
+  .country-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    accent-color: #4CAF50;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .country-item label {
+    font-size: 14px;
+    cursor: pointer;
+    flex: 1;
+  }
+  .map-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .map-toolbar {
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .map-toolbar button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .map-toolbar button:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+  }
+  .map-toolbar button.export-btn {
+    background: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+  }
+  .map-toolbar button.export-btn:hover {
+    background: #1557b0;
+  }
+  .color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .color-picker-group label {
+    font-size: 13px;
+    color: #666;
+  }
+  .color-picker-group input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  #map-area {
+    flex: 1;
+    background: #dceeff;
+    overflow: hidden;
+    position: relative;
+  }
+  #map-area svg {
+    width: 100%;
+    height: 100%;
+  }
+  .country-path {
+    stroke: #999;
+    stroke-width: 0.5;
+    cursor: pointer;
+    transition: fill 0.2s;
+  }
+  .country-path:hover {
+    stroke: #333;
+    stroke-width: 1.2;
+  }
+  .country-path.active {
+    fill: #4CAF50;
+  }
+  .graticule {
+    fill: none;
+    stroke: #c8ddf0;
+    stroke-width: 0.4;
+  }
+  .sphere {
+    fill: #dceeff;
+    stroke: #aaa;
+    stroke-width: 0.5;
+  }
+  .tooltip {
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+    white-space: nowrap;
+  }
+  /* Hidden canvas for PNG export */
+  #export-canvas { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>Country Selector</h1>
+      <input type="text" class="search-box" id="search" placeholder="Search countries..." autocomplete="off">
+    </div>
+    <div class="sidebar-actions">
+      <button onclick="selectAll()">Select All</button>
+      <button onclick="deselectAll()">Deselect All</button>
+      <button onclick="invertSelection()">Invert</button>
+    </div>
+    <div class="country-count" id="country-count">0 / 0 selected</div>
+    <div class="country-list" id="country-list"></div>
+  </div>
+  <div class="map-container">
+    <div class="map-toolbar">
+      <button class="export-btn" onclick="exportPNG()">Export PNG</button>
+      <button onclick="resetZoom()">Reset Zoom</button>
+      <div class="color-picker-group">
+        <label>Active color:</label>
+        <input type="color" id="active-color" value="#4CAF50">
+      </div>
+      <div class="color-picker-group">
+        <label>Inactive:</label>
+        <input type="color" id="inactive-color" value="#e0e0e0">
+      </div>
+    </div>
+    <div id="map-area">
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+</div>
+<canvas id="export-canvas"></canvas>
+
+<script>
+// State
+const selectedCountries = new Set();
+let countryFeatures = [];
+let countryMap = {};       // id -> feature
+let countryPathMap = {};   // id -> DOM path element
+let activeColor = '#4CAF50';
+let inactiveColor = '#e0e0e0';
+
+// Comprehensive country name mapping (numeric ISO 3166-1 -> name)
+// This covers all countries in the world-110m TopoJSON
+const COUNTRY_NAMES = {
+  4:"Afghanistan",8:"Albania",12:"Algeria",16:"American Samoa",20:"Andorra",
+  24:"Angola",28:"Antigua and Barbuda",32:"Argentina",51:"Armenia",36:"Australia",
+  40:"Austria",31:"Azerbaijan",44:"Bahamas",48:"Bahrain",50:"Bangladesh",
+  52:"Barbados",112:"Belarus",56:"Belgium",84:"Belize",204:"Benin",60:"Bermuda",
+  64:"Bhutan",68:"Bolivia",70:"Bosnia and Herzegovina",72:"Botswana",76:"Brazil",
+  96:"Brunei",100:"Bulgaria",854:"Burkina Faso",108:"Burundi",132:"Cabo Verde",
+  116:"Cambodia",120:"Cameroon",124:"Canada",140:"Central African Republic",
+  148:"Chad",152:"Chile",156:"China",170:"Colombia",174:"Comoros",
+  178:"Congo (Republic)",180:"Congo (Democratic Republic)",188:"Costa Rica",
+  384:"Ivory Coast",191:"Croatia",192:"Cuba",196:"Cyprus",203:"Czech Republic",
+  208:"Denmark",262:"Djibouti",212:"Dominica",214:"Dominican Republic",
+  218:"Ecuador",818:"Egypt",222:"El Salvador",226:"Equatorial Guinea",
+  232:"Eritrea",233:"Estonia",748:"Eswatini",231:"Ethiopia",242:"Fiji",
+  246:"Finland",250:"France",266:"Gabon",270:"Gambia",268:"Georgia",
+  276:"Germany",288:"Ghana",300:"Greece",308:"Grenada",320:"Guatemala",
+  324:"Guinea",624:"Guinea-Bissau",328:"Guyana",332:"Haiti",340:"Honduras",
+  348:"Hungary",352:"Iceland",356:"India",360:"Indonesia",364:"Iran",
+  368:"Iraq",372:"Ireland",376:"Israel",380:"Italy",388:"Jamaica",
+  392:"Japan",400:"Jordan",398:"Kazakhstan",404:"Kenya",296:"Kiribati",
+  408:"North Korea",410:"South Korea",414:"Kuwait",417:"Kyrgyzstan",
+  418:"Laos",428:"Latvia",422:"Lebanon",426:"Lesotho",430:"Liberia",
+  434:"Libya",438:"Liechtenstein",440:"Lithuania",442:"Luxembourg",
+  450:"Madagascar",454:"Malawi",458:"Malaysia",462:"Maldives",466:"Mali",
+  470:"Malta",584:"Marshall Islands",478:"Mauritania",480:"Mauritius",
+  484:"Mexico",583:"Micronesia",498:"Moldova",492:"Monaco",496:"Mongolia",
+  499:"Montenegro",504:"Morocco",508:"Mozambique",104:"Myanmar",516:"Namibia",
+  520:"Nauru",524:"Nepal",528:"Netherlands",554:"New Zealand",558:"Nicaragua",
+  562:"Niger",566:"Nigeria",807:"North Macedonia",578:"Norway",512:"Oman",
+  586:"Pakistan",585:"Palau",275:"Palestine",591:"Panama",598:"Papua New Guinea",
+  600:"Paraguay",604:"Peru",608:"Philippines",616:"Poland",620:"Portugal",
+  634:"Qatar",642:"Romania",643:"Russia",646:"Rwanda",
+  659:"Saint Kitts and Nevis",662:"Saint Lucia",
+  670:"Saint Vincent and the Grenadines",882:"Samoa",674:"San Marino",
+  678:"Sao Tome and Principe",682:"Saudi Arabia",686:"Senegal",688:"Serbia",
+  690:"Seychelles",694:"Sierra Leone",702:"Singapore",703:"Slovakia",
+  705:"Slovenia",90:"Solomon Islands",706:"Somalia",710:"South Africa",
+  728:"South Sudan",724:"Spain",144:"Sri Lanka",729:"Sudan",740:"Suriname",
+  752:"Sweden",756:"Switzerland",760:"Syria",158:"Taiwan",762:"Tajikistan",
+  834:"Tanzania",764:"Thailand",626:"Timor-Leste",768:"Togo",776:"Tonga",
+  780:"Trinidad and Tobago",788:"Tunisia",792:"Turkey",795:"Turkmenistan",
+  798:"Tuvalu",800:"Uganda",804:"Ukraine",784:"United Arab Emirates",
+  826:"United Kingdom",840:"United States of America",858:"Uruguay",
+  860:"Uzbekistan",548:"Vanuatu",862:"Venezuela",704:"Vietnam",887:"Yemen",
+  894:"Zambia",716:"Zimbabwe",
+  // Territories and additional entries that appear in world maps
+  10:"Antarctica",74:"Bouvet Island",86:"British Indian Ocean Territory",
+  162:"Christmas Island",166:"Cocos (Keeling) Islands",184:"Cook Islands",
+  234:"Faroe Islands",238:"Falkland Islands",254:"French Guiana",
+  258:"French Polynesia",260:"French Southern Territories",292:"Gibraltar",
+  304:"Greenland",312:"Guadeloupe",316:"Guam",344:"Hong Kong",
+  446:"Macau",474:"Martinique",175:"Mayotte",540:"New Caledonia",
+  570:"Niue",574:"Norfolk Island",580:"Northern Mariana Islands",
+  612:"Pitcairn Islands",630:"Puerto Rico",638:"Reunion",
+  652:"Saint Barthelemy",654:"Saint Martin",666:"Saint Pierre and Miquelon",
+  732:"Western Sahara",796:"Turks and Caicos Islands",
+  850:"US Virgin Islands",876:"Wallis and Futuna",
+  -99:"Northern Cyprus",
+  -1: "Kosovo"
+};
+
+// Alternative names/aliases for searching
+const ALIASES = {
+  "usa": 840, "us": 840, "america": 840, "united states": 840,
+  "uk": 826, "britain": 826, "great britain": 826, "england": 826,
+  "uae": 784, "emirates": 784,
+  "russia": 643, "russian federation": 643,
+  "south korea": 410, "korea south": 410, "rok": 410,
+  "north korea": 408, "korea north": 408, "dprk": 408,
+  "drc": 180, "dr congo": 180, "democratic republic of congo": 180,
+  "congo": 178, "republic of congo": 178,
+  "ivory coast": 384, "cote d'ivoire": 384, "cote divoire": 384,
+  "czech republic": 203, "czechia": 203,
+  "cabo verde": 132, "cape verde": 132,
+  "eswatini": 748, "swaziland": 748,
+  "myanmar": 104, "burma": 104,
+  "timor-leste": 626, "east timor": 626,
+  "brunei darussalam": 96, "brunei": 96,
+  "lao": 418, "laos": 418,
+  "taiwan": 158, "chinese taipei": 158,
+  "palestine": 275, "palestinian territories": 275,
+  "hong kong": 344, "hk": 344,
+  "macau": 446, "macao": 446,
+  "north macedonia": 807, "macedonia": 807,
+  "netherlands": 528, "holland": 528,
+  "new zealand": 554, "nz": 554, "aotearoa": 554,
+  "saudi": 682, "ksa": 682,
+  "south africa": 710, "rsa": 710,
+  "south sudan": 728,
+  "trinidad": 780, "tobago": 780,
+  "papua new guinea": 598, "png": 598,
+  "west sahara": 732, "western sahara": 732,
+};
+
+// D3 setup
+const mapArea = document.getElementById('map-area');
+const width = mapArea.clientWidth || 960;
+const height = mapArea.clientHeight || 600;
+
+// Use Natural Earth projection - shows full world including NZ nicely
+const projection = d3.geoNaturalEarth1()
+  .scale(1)
+  .translate([0, 0]);
+
+const path = d3.geoPath().projection(projection);
+const graticule = d3.geoGraticule();
+
+const svg = d3.select('#map-area')
+  .append('svg')
+  .attr('id', 'map-svg');
+
+// Zoom behavior
+const zoom = d3.zoom()
+  .scaleExtent([1, 12])
+  .on('zoom', (event) => {
+    g.attr('transform', event.transform);
+  });
+
+svg.call(zoom);
+
+const g = svg.append('g');
+
+// Draw sphere (ocean)
+g.append('path')
+  .datum({ type: 'Sphere' })
+  .attr('class', 'sphere')
+  .attr('d', path);
+
+// Draw graticule
+g.append('path')
+  .datum(graticule())
+  .attr('class', 'graticule')
+  .attr('d', path);
+
+const countriesGroup = g.append('g');
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+
+function fitProjection() {
+  const w = mapArea.clientWidth;
+  const h = mapArea.clientHeight;
+  svg.attr('viewBox', `0 0 ${w} ${h}`);
+  projection.fitSize([w, h], { type: 'Sphere' });
+  // Redraw
+  g.select('.sphere').attr('d', path);
+  g.select('.graticule').attr('d', path);
+  countriesGroup.selectAll('.country-path').attr('d', path);
+}
+
+// Load map data
+const DATA_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+
+d3.json(DATA_URL).then(world => {
+  const countries = topojson.feature(world, world.objects.countries);
+  countryFeatures = countries.features;
+
+  // Build paths
+  countriesGroup.selectAll('.country-path')
+    .data(countryFeatures)
+    .enter()
+    .append('path')
+    .attr('class', 'country-path')
+    .attr('d', path)
+    .attr('fill', inactiveColor)
+    .attr('data-id', d => d.id)
+    .on('click', (event, d) => {
+      toggleCountry(d.id);
+    })
+    .on('mouseenter', (event, d) => {
+      const name = getCountryName(d.id);
+      tooltip.textContent = name;
+      tooltip.style.opacity = '1';
+    })
+    .on('mousemove', (event) => {
+      const rect = mapArea.getBoundingClientRect();
+      tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (event.clientY - rect.top - 30) + 'px';
+    })
+    .on('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+
+  // Store path references
+  countriesGroup.selectAll('.country-path').each(function(d) {
+    countryPathMap[d.id] = this;
+  });
+
+  fitProjection();
+  buildCountryList();
+});
+
+function getCountryName(id) {
+  return COUNTRY_NAMES[id] || `Unknown (${id})`;
+}
+
+function buildCountryList() {
+  const list = document.getElementById('country-list');
+  // Build sorted list of countries that exist in the map data
+  const entries = countryFeatures
+    .map(f => ({ id: f.id, name: getCountryName(f.id) }))
+    .filter(e => e.name && !e.name.startsWith('Unknown'))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  list.innerHTML = '';
+  entries.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'country-item';
+    div.dataset.id = entry.id;
+    div.dataset.name = entry.name.toLowerCase();
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'cb-' + entry.id;
+    cb.addEventListener('change', () => toggleCountry(entry.id));
+
+    const label = document.createElement('label');
+    label.htmlFor = 'cb-' + entry.id;
+    label.textContent = entry.name;
+
+    div.appendChild(cb);
+    div.appendChild(label);
+    div.addEventListener('click', (e) => {
+      if (e.target !== cb) {
+        cb.checked = !cb.checked;
+        toggleCountry(entry.id);
+        e.preventDefault();
+      }
+    });
+    list.appendChild(div);
+  });
+
+  updateCount();
+}
+
+function toggleCountry(id) {
+  id = String(id);
+  if (selectedCountries.has(id)) {
+    selectedCountries.delete(id);
+  } else {
+    selectedCountries.add(id);
+  }
+  updateMapAndList();
+}
+
+function updateMapAndList() {
+  // Update map fills
+  countriesGroup.selectAll('.country-path')
+    .attr('fill', d => selectedCountries.has(String(d.id)) ? activeColor : inactiveColor);
+
+  // Update checkboxes
+  document.querySelectorAll('.country-item').forEach(item => {
+    const id = item.dataset.id;
+    const cb = item.querySelector('input');
+    const isSelected = selectedCountries.has(id);
+    cb.checked = isSelected;
+    item.classList.toggle('selected', isSelected);
+  });
+
+  updateCount();
+}
+
+function updateCount() {
+  const total = document.querySelectorAll('.country-item').length;
+  const count = selectedCountries.size;
+  document.getElementById('country-count').textContent = `${count} / ${total} selected`;
+}
+
+// Search
+document.getElementById('search').addEventListener('input', function() {
+  const query = this.value.trim().toLowerCase();
+  const items = document.querySelectorAll('.country-item');
+
+  if (!query) {
+    items.forEach(item => item.style.display = '');
+    return;
+  }
+
+  // Check if search matches an alias
+  const aliasId = ALIASES[query];
+
+  items.forEach(item => {
+    const name = item.dataset.name;
+    const id = item.dataset.id;
+    const matches = name.includes(query) || (aliasId && id === String(aliasId));
+    item.style.display = matches ? '' : 'none';
+  });
+});
+
+// Handle Enter in search to toggle first visible result
+document.getElementById('search').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const query = this.value.trim().toLowerCase();
+    if (!query) return;
+
+    // Check alias first
+    const aliasId = ALIASES[query];
+    if (aliasId) {
+      if (!selectedCountries.has(String(aliasId))) {
+        selectedCountries.add(String(aliasId));
+        updateMapAndList();
+      }
+      this.value = '';
+      this.dispatchEvent(new Event('input'));
+      return;
+    }
+
+    // Toggle first visible
+    const firstVisible = document.querySelector('.country-item[style=""], .country-item:not([style])');
+    if (firstVisible && firstVisible.style.display !== 'none') {
+      const id = firstVisible.dataset.id;
+      if (!selectedCountries.has(id)) {
+        selectedCountries.add(id);
+        updateMapAndList();
+      }
+      this.value = '';
+      this.dispatchEvent(new Event('input'));
+    }
+  }
+});
+
+// Select/deselect/invert
+function selectAll() {
+  document.querySelectorAll('.country-item').forEach(item => {
+    if (item.style.display !== 'none') {
+      selectedCountries.add(item.dataset.id);
+    }
+  });
+  updateMapAndList();
+}
+
+function deselectAll() {
+  selectedCountries.clear();
+  updateMapAndList();
+}
+
+function invertSelection() {
+  document.querySelectorAll('.country-item').forEach(item => {
+    const id = item.dataset.id;
+    if (selectedCountries.has(id)) {
+      selectedCountries.delete(id);
+    } else {
+      selectedCountries.add(id);
+    }
+  });
+  updateMapAndList();
+}
+
+// Color pickers
+document.getElementById('active-color').addEventListener('input', function() {
+  activeColor = this.value;
+  updateMapAndList();
+});
+
+document.getElementById('inactive-color').addEventListener('input', function() {
+  inactiveColor = this.value;
+  updateMapAndList();
+});
+
+// Reset zoom
+function resetZoom() {
+  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+}
+
+// Export PNG
+function exportPNG() {
+  const svgEl = document.getElementById('map-svg');
+  const svgRect = svgEl.getBoundingClientRect();
+  const w = svgRect.width * 2; // 2x for retina quality
+  const h = svgRect.height * 2;
+
+  // Clone SVG and inline styles
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('width', w);
+  clone.setAttribute('height', h);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  // Remove viewBox to use explicit size
+  const vb = clone.getAttribute('viewBox');
+  if (vb) {
+    clone.setAttribute('viewBox', vb);
+  }
+
+  // Inline all computed styles
+  const allPaths = clone.querySelectorAll('path');
+  const origPaths = svgEl.querySelectorAll('path');
+  allPaths.forEach((p, i) => {
+    const orig = origPaths[i];
+    if (orig) {
+      const cs = window.getComputedStyle(orig);
+      p.style.fill = cs.fill;
+      p.style.stroke = cs.stroke;
+      p.style.strokeWidth = cs.strokeWidth;
+    }
+  });
+
+  const svgData = new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.getElementById('export-canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#dceeff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+
+    canvas.toBlob(pngBlob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      a.download = 'world-map.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }, 'image/png');
+  };
+  img.src = url;
+}
+
+// Resize handler
+window.addEventListener('resize', () => {
+  fitProjection();
+});
+</script>
+</body>
+</html>
