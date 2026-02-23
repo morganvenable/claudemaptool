@@ -559,6 +559,10 @@ Promise.all([
 
   fitProjection();
   buildCountryList();
+  // Apply any saved selections from localStorage
+  if (selectedCountries.size > 0) {
+    updateMapAndList();
+  }
 });
 
 function buildCountryList() {
