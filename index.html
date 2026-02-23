@@ -254,13 +254,31 @@
 <canvas id="export-canvas"></canvas>
 
 <script>
-// State
-const selectedCountries = new Set();
+// State - restore from localStorage if available
+const STORAGE_KEY = 'claudemaptool_state';
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved) return saved;
+  } catch(e) {}
+  return { selected: [], activeColor: '#4CAF50', inactiveColor: '#e0e0e0' };
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      selected: [...selectedCountries],
+      activeColor,
+      inactiveColor
+    }));
+  } catch(e) {}
+}
+const saved = loadState();
+const selectedCountries = new Set(saved.selected);
 let countryFeatures = [];
 let countryMap = {};       // id -> feature
 let countryPathMap = {};   // id -> DOM path element
-let activeColor = '#4CAF50';
-let inactiveColor = '#e0e0e0';
+let activeColor = saved.activeColor;
+let inactiveColor = saved.inactiveColor;
 
 // Country name mapping: numeric ISO 3166-1 code (as string) -> full name
 // Keys are strings to match the TopoJSON string IDs (which may have leading zeros)
@@ -607,6 +625,7 @@ function updateMapAndList() {
   });
 
   updateCount();
+  saveState();
 }
 
 function updateCount() {
@@ -695,7 +714,10 @@ function invertSelection() {
   updateMapAndList();
 }
 
-// Color pickers
+// Color pickers - initialize from saved state
+document.getElementById('active-color').value = activeColor;
+document.getElementById('inactive-color').value = inactiveColor;
+
 document.getElementById('active-color').addEventListener('input', function() {
   activeColor = this.value;
   updateMapAndList();
