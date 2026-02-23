@@ -311,22 +311,33 @@ const COUNTRY_NAMES = {
   "826":"United Kingdom","840":"United States of America","858":"Uruguay",
   "860":"Uzbekistan","548":"Vanuatu","862":"Venezuela","704":"Vietnam","887":"Yemen",
   "894":"Zambia","716":"Zimbabwe",
-  // Territories
+  // Territories and dependencies
   "010":"Antarctica","074":"Bouvet Island","086":"British Indian Ocean Territory",
+  "092":"British Virgin Islands","136":"Cayman Islands",
   "162":"Christmas Island","166":"Cocos (Keeling) Islands","184":"Cook Islands",
-  "234":"Faroe Islands","238":"Falkland Islands","254":"French Guiana",
+  "234":"Faroe Islands","238":"Falkland Islands","239":"South Georgia and the South Sandwich Islands",
+  "248":"Aland Islands","254":"French Guiana",
   "258":"French Polynesia","260":"French Southern Territories","292":"Gibraltar",
-  "304":"Greenland","312":"Guadeloupe","316":"Guam","344":"Hong Kong",
-  "446":"Macau","474":"Martinique","175":"Mayotte","540":"New Caledonia",
+  "304":"Greenland","312":"Guadeloupe","316":"Guam",
+  "334":"Heard Island and McDonald Islands","336":"Vatican City",
+  "344":"Hong Kong",
+  "446":"Macau","474":"Martinique","175":"Mayotte",
+  "500":"Montserrat","533":"Aruba","531":"Curacao","534":"Sint Maarten",
+  "540":"New Caledonia",
   "570":"Niue","574":"Norfolk Island","580":"Northern Mariana Islands",
   "612":"Pitcairn Islands","630":"Puerto Rico","638":"Reunion",
-  "652":"Saint Barthelemy","654":"Saint Martin","666":"Saint Pierre and Miquelon",
+  "652":"Saint Barthelemy","654":"Saint Martin",
+  "660":"Anguilla","663":"Saint Martin (French)",
+  "666":"Saint Pierre and Miquelon",
   "732":"Western Sahara","796":"Turks and Caicos Islands",
+  "831":"Guernsey","832":"Jersey","833":"Isle of Man",
   "850":"US Virgin Islands","876":"Wallis and Futuna",
   // Entities with no standard numeric ISO code (use synthetic IDs)
   "NCY":"Northern Cyprus",
   "KOS":"Kosovo",
   "SOL":"Somaliland",
+  "IOT":"Indian Ocean Territories",
+  "SIA":"Siachen Glacier",
   "GUF":"French Guiana"
 };
 
@@ -433,21 +444,40 @@ function fitProjection() {
   countriesGroup.selectAll('.country-path').attr('d', path);
 }
 
+// Track used IDs to handle duplicates (e.g., Ashmore & Cartier Is. shares 036 with Australia)
+const usedIds = new Set();
+
 // Assign a stable unique ID to each feature for use throughout the app
 function assignFeatureId(feature) {
-  // If it already has a string/number id from TopoJSON, use it
-  if (feature.id != null) return String(feature.id);
-  // For features without an id, use properties.name to assign synthetic IDs
   const name = (feature.properties && feature.properties.name) || '';
-  if (name === 'N. Cyprus' || name === 'Northern Cyprus') return 'NCY';
-  if (name === 'Kosovo') return 'KOS';
-  if (name === 'Somaliland') return 'SOL';
-  if (name === 'French Guiana') return 'GUF';
-  return 'UNK_' + name;
+
+  // Features without a numeric id - assign synthetic IDs
+  if (feature.id == null) {
+    if (name === 'N. Cyprus' || name === 'Northern Cyprus') return 'NCY';
+    if (name === 'Kosovo') return 'KOS';
+    if (name === 'Somaliland') return 'SOL';
+    if (name === 'French Guiana') return 'GUF';
+    if (name === 'Indian Ocean Ter.') return 'IOT';
+    if (name === 'Siachen Glacier') return 'SIA';
+    return 'UNK_' + name;
+  }
+
+  let id = String(feature.id);
+
+  // Handle duplicate IDs (e.g., Ashmore & Cartier Is. also has id "036")
+  if (usedIds.has(id)) {
+    // This is a secondary feature with a duplicate ID - give it a unique suffix
+    id = id + '_' + name.replace(/[^a-zA-Z]/g, '').substring(0, 6);
+  }
+  usedIds.add(id);
+  return id;
 }
 
+// Map from _uid to properties.name for fallback lookups
+const featureNameMap = {};
+
 function getCountryName(id) {
-  return COUNTRY_NAMES_NUM[id] || COUNTRY_NAMES_NUM[String(id)] || null;
+  return COUNTRY_NAMES_NUM[id] || COUNTRY_NAMES_NUM[String(id)] || featureNameMap[id] || null;
 }
 
 // Load main TopoJSON, then overlay French Guiana from Natural Earth map units
@@ -460,8 +490,14 @@ Promise.all([
 ]).then(([world, mapUnits]) => {
   const countries = topojson.feature(world, world.objects.countries);
 
-  // Assign stable IDs to all features
-  countries.features.forEach(f => { f._uid = assignFeatureId(f); });
+  // Assign stable IDs to all features and build fallback name map
+  countries.features.forEach(f => {
+    f._uid = assignFeatureId(f);
+    // Store the Natural Earth short name as fallback for features not in COUNTRY_NAMES
+    if (f.properties && f.properties.name) {
+      featureNameMap[f._uid] = f.properties.name;
+    }
+  });
 
   // Find French Guiana from map units and add it as a separate feature
   const frenchGuiana = mapUnits.features.find(f => f.properties.GU_A3 === 'GUF');
