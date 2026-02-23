@@ -262,100 +262,119 @@ let countryPathMap = {};   // id -> DOM path element
 let activeColor = '#4CAF50';
 let inactiveColor = '#e0e0e0';
 
-// Comprehensive country name mapping (numeric ISO 3166-1 -> name)
-// This covers all countries in the world-110m TopoJSON
+// Country name mapping: numeric ISO 3166-1 code (as string) -> full name
+// Keys are strings to match the TopoJSON string IDs (which may have leading zeros)
 const COUNTRY_NAMES = {
-  4:"Afghanistan",8:"Albania",12:"Algeria",16:"American Samoa",20:"Andorra",
-  24:"Angola",28:"Antigua and Barbuda",32:"Argentina",51:"Armenia",36:"Australia",
-  40:"Austria",31:"Azerbaijan",44:"Bahamas",48:"Bahrain",50:"Bangladesh",
-  52:"Barbados",112:"Belarus",56:"Belgium",84:"Belize",204:"Benin",60:"Bermuda",
-  64:"Bhutan",68:"Bolivia",70:"Bosnia and Herzegovina",72:"Botswana",76:"Brazil",
-  96:"Brunei",100:"Bulgaria",854:"Burkina Faso",108:"Burundi",132:"Cabo Verde",
-  116:"Cambodia",120:"Cameroon",124:"Canada",140:"Central African Republic",
-  148:"Chad",152:"Chile",156:"China",170:"Colombia",174:"Comoros",
-  178:"Congo (Republic)",180:"Congo (Democratic Republic)",188:"Costa Rica",
-  384:"Ivory Coast",191:"Croatia",192:"Cuba",196:"Cyprus",203:"Czech Republic",
-  208:"Denmark",262:"Djibouti",212:"Dominica",214:"Dominican Republic",
-  218:"Ecuador",818:"Egypt",222:"El Salvador",226:"Equatorial Guinea",
-  232:"Eritrea",233:"Estonia",748:"Eswatini",231:"Ethiopia",242:"Fiji",
-  246:"Finland",250:"France",266:"Gabon",270:"Gambia",268:"Georgia",
-  276:"Germany",288:"Ghana",300:"Greece",308:"Grenada",320:"Guatemala",
-  324:"Guinea",624:"Guinea-Bissau",328:"Guyana",332:"Haiti",340:"Honduras",
-  348:"Hungary",352:"Iceland",356:"India",360:"Indonesia",364:"Iran",
-  368:"Iraq",372:"Ireland",376:"Israel",380:"Italy",388:"Jamaica",
-  392:"Japan",400:"Jordan",398:"Kazakhstan",404:"Kenya",296:"Kiribati",
-  408:"North Korea",410:"South Korea",414:"Kuwait",417:"Kyrgyzstan",
-  418:"Laos",428:"Latvia",422:"Lebanon",426:"Lesotho",430:"Liberia",
-  434:"Libya",438:"Liechtenstein",440:"Lithuania",442:"Luxembourg",
-  450:"Madagascar",454:"Malawi",458:"Malaysia",462:"Maldives",466:"Mali",
-  470:"Malta",584:"Marshall Islands",478:"Mauritania",480:"Mauritius",
-  484:"Mexico",583:"Micronesia",498:"Moldova",492:"Monaco",496:"Mongolia",
-  499:"Montenegro",504:"Morocco",508:"Mozambique",104:"Myanmar",516:"Namibia",
-  520:"Nauru",524:"Nepal",528:"Netherlands",554:"New Zealand",558:"Nicaragua",
-  562:"Niger",566:"Nigeria",807:"North Macedonia",578:"Norway",512:"Oman",
-  586:"Pakistan",585:"Palau",275:"Palestine",591:"Panama",598:"Papua New Guinea",
-  600:"Paraguay",604:"Peru",608:"Philippines",616:"Poland",620:"Portugal",
-  634:"Qatar",642:"Romania",643:"Russia",646:"Rwanda",
-  659:"Saint Kitts and Nevis",662:"Saint Lucia",
-  670:"Saint Vincent and the Grenadines",882:"Samoa",674:"San Marino",
-  678:"Sao Tome and Principe",682:"Saudi Arabia",686:"Senegal",688:"Serbia",
-  690:"Seychelles",694:"Sierra Leone",702:"Singapore",703:"Slovakia",
-  705:"Slovenia",90:"Solomon Islands",706:"Somalia",710:"South Africa",
-  728:"South Sudan",724:"Spain",144:"Sri Lanka",729:"Sudan",740:"Suriname",
-  752:"Sweden",756:"Switzerland",760:"Syria",158:"Taiwan",762:"Tajikistan",
-  834:"Tanzania",764:"Thailand",626:"Timor-Leste",768:"Togo",776:"Tonga",
-  780:"Trinidad and Tobago",788:"Tunisia",792:"Turkey",795:"Turkmenistan",
-  798:"Tuvalu",800:"Uganda",804:"Ukraine",784:"United Arab Emirates",
-  826:"United Kingdom",840:"United States of America",858:"Uruguay",
-  860:"Uzbekistan",548:"Vanuatu",862:"Venezuela",704:"Vietnam",887:"Yemen",
-  894:"Zambia",716:"Zimbabwe",
-  // Territories and additional entries that appear in world maps
-  10:"Antarctica",74:"Bouvet Island",86:"British Indian Ocean Territory",
-  162:"Christmas Island",166:"Cocos (Keeling) Islands",184:"Cook Islands",
-  234:"Faroe Islands",238:"Falkland Islands",254:"French Guiana",
-  258:"French Polynesia",260:"French Southern Territories",292:"Gibraltar",
-  304:"Greenland",312:"Guadeloupe",316:"Guam",344:"Hong Kong",
-  446:"Macau",474:"Martinique",175:"Mayotte",540:"New Caledonia",
-  570:"Niue",574:"Norfolk Island",580:"Northern Mariana Islands",
-  612:"Pitcairn Islands",630:"Puerto Rico",638:"Reunion",
-  652:"Saint Barthelemy",654:"Saint Martin",666:"Saint Pierre and Miquelon",
-  732:"Western Sahara",796:"Turks and Caicos Islands",
-  850:"US Virgin Islands",876:"Wallis and Futuna",
-  "-99":"Northern Cyprus",
-  "-1": "Kosovo"
+  "004":"Afghanistan","008":"Albania","012":"Algeria","016":"American Samoa",
+  "020":"Andorra","024":"Angola","028":"Antigua and Barbuda","032":"Argentina",
+  "051":"Armenia","036":"Australia","040":"Austria","031":"Azerbaijan",
+  "044":"Bahamas","048":"Bahrain","050":"Bangladesh","052":"Barbados",
+  "112":"Belarus","056":"Belgium","084":"Belize","204":"Benin","060":"Bermuda",
+  "064":"Bhutan","068":"Bolivia","070":"Bosnia and Herzegovina","072":"Botswana",
+  "076":"Brazil","096":"Brunei","100":"Bulgaria","854":"Burkina Faso",
+  "108":"Burundi","132":"Cabo Verde","116":"Cambodia","120":"Cameroon",
+  "124":"Canada","140":"Central African Republic","148":"Chad","152":"Chile",
+  "156":"China","170":"Colombia","174":"Comoros","178":"Congo (Republic)",
+  "180":"Congo (Democratic Republic)","188":"Costa Rica","384":"Ivory Coast",
+  "191":"Croatia","192":"Cuba","196":"Cyprus","203":"Czech Republic",
+  "208":"Denmark","262":"Djibouti","212":"Dominica","214":"Dominican Republic",
+  "218":"Ecuador","818":"Egypt","222":"El Salvador","226":"Equatorial Guinea",
+  "232":"Eritrea","233":"Estonia","748":"Eswatini","231":"Ethiopia","242":"Fiji",
+  "246":"Finland","250":"France","266":"Gabon","270":"Gambia","268":"Georgia",
+  "276":"Germany","288":"Ghana","300":"Greece","308":"Grenada","320":"Guatemala",
+  "324":"Guinea","624":"Guinea-Bissau","328":"Guyana","332":"Haiti","340":"Honduras",
+  "348":"Hungary","352":"Iceland","356":"India","360":"Indonesia","364":"Iran",
+  "368":"Iraq","372":"Ireland","376":"Israel","380":"Italy","388":"Jamaica",
+  "392":"Japan","400":"Jordan","398":"Kazakhstan","404":"Kenya","296":"Kiribati",
+  "408":"North Korea","410":"South Korea","414":"Kuwait","417":"Kyrgyzstan",
+  "418":"Laos","428":"Latvia","422":"Lebanon","426":"Lesotho","430":"Liberia",
+  "434":"Libya","438":"Liechtenstein","440":"Lithuania","442":"Luxembourg",
+  "450":"Madagascar","454":"Malawi","458":"Malaysia","462":"Maldives","466":"Mali",
+  "470":"Malta","584":"Marshall Islands","478":"Mauritania","480":"Mauritius",
+  "484":"Mexico","583":"Micronesia","498":"Moldova","492":"Monaco","496":"Mongolia",
+  "499":"Montenegro","504":"Morocco","508":"Mozambique","104":"Myanmar","516":"Namibia",
+  "520":"Nauru","524":"Nepal","528":"Netherlands","554":"New Zealand","558":"Nicaragua",
+  "562":"Niger","566":"Nigeria","807":"North Macedonia","578":"Norway","512":"Oman",
+  "586":"Pakistan","585":"Palau","275":"Palestine","591":"Panama",
+  "598":"Papua New Guinea","600":"Paraguay","604":"Peru","608":"Philippines",
+  "616":"Poland","620":"Portugal","634":"Qatar","642":"Romania","643":"Russia",
+  "646":"Rwanda","659":"Saint Kitts and Nevis","662":"Saint Lucia",
+  "670":"Saint Vincent and the Grenadines","882":"Samoa","674":"San Marino",
+  "678":"Sao Tome and Principe","682":"Saudi Arabia","686":"Senegal","688":"Serbia",
+  "690":"Seychelles","694":"Sierra Leone","702":"Singapore","703":"Slovakia",
+  "705":"Slovenia","090":"Solomon Islands","706":"Somalia","710":"South Africa",
+  "728":"South Sudan","724":"Spain","144":"Sri Lanka","729":"Sudan","740":"Suriname",
+  "752":"Sweden","756":"Switzerland","760":"Syria","158":"Taiwan","762":"Tajikistan",
+  "834":"Tanzania","764":"Thailand","626":"Timor-Leste","768":"Togo","776":"Tonga",
+  "780":"Trinidad and Tobago","788":"Tunisia","792":"Turkey","795":"Turkmenistan",
+  "798":"Tuvalu","800":"Uganda","804":"Ukraine","784":"United Arab Emirates",
+  "826":"United Kingdom","840":"United States of America","858":"Uruguay",
+  "860":"Uzbekistan","548":"Vanuatu","862":"Venezuela","704":"Vietnam","887":"Yemen",
+  "894":"Zambia","716":"Zimbabwe",
+  // Territories
+  "010":"Antarctica","074":"Bouvet Island","086":"British Indian Ocean Territory",
+  "162":"Christmas Island","166":"Cocos (Keeling) Islands","184":"Cook Islands",
+  "234":"Faroe Islands","238":"Falkland Islands","254":"French Guiana",
+  "258":"French Polynesia","260":"French Southern Territories","292":"Gibraltar",
+  "304":"Greenland","312":"Guadeloupe","316":"Guam","344":"Hong Kong",
+  "446":"Macau","474":"Martinique","175":"Mayotte","540":"New Caledonia",
+  "570":"Niue","574":"Norfolk Island","580":"Northern Mariana Islands",
+  "612":"Pitcairn Islands","630":"Puerto Rico","638":"Reunion",
+  "652":"Saint Barthelemy","654":"Saint Martin","666":"Saint Pierre and Miquelon",
+  "732":"Western Sahara","796":"Turks and Caicos Islands",
+  "850":"US Virgin Islands","876":"Wallis and Futuna",
+  // Entities with no standard numeric ISO code (use synthetic IDs)
+  "NCY":"Northern Cyprus",
+  "KOS":"Kosovo",
+  "SOL":"Somaliland",
+  "GUF":"French Guiana"
 };
 
-// Alternative names/aliases for searching
+// Build a secondary lookup: strip leading zeros for numeric IDs
+const COUNTRY_NAMES_NUM = {};
+for (const [k, v] of Object.entries(COUNTRY_NAMES)) {
+  COUNTRY_NAMES_NUM[k] = v;
+  // Also store without leading zeros so "032" -> "Argentina" works via Number("032")=32
+  if (/^\d+$/.test(k)) {
+    COUNTRY_NAMES_NUM[String(Number(k))] = v;
+  }
+}
+
+// Alternative names/aliases for searching (values are string IDs matching COUNTRY_NAMES keys)
 const ALIASES = {
-  "usa": 840, "us": 840, "america": 840, "united states": 840,
-  "uk": 826, "britain": 826, "great britain": 826, "england": 826,
-  "uae": 784, "emirates": 784,
-  "russia": 643, "russian federation": 643,
-  "south korea": 410, "korea south": 410, "rok": 410,
-  "north korea": 408, "korea north": 408, "dprk": 408,
-  "drc": 180, "dr congo": 180, "democratic republic of congo": 180,
-  "congo": 178, "republic of congo": 178,
-  "ivory coast": 384, "cote d'ivoire": 384, "cote divoire": 384,
-  "czech republic": 203, "czechia": 203,
-  "cabo verde": 132, "cape verde": 132,
-  "eswatini": 748, "swaziland": 748,
-  "myanmar": 104, "burma": 104,
-  "timor-leste": 626, "east timor": 626,
-  "brunei darussalam": 96, "brunei": 96,
-  "lao": 418, "laos": 418,
-  "taiwan": 158, "chinese taipei": 158,
-  "palestine": 275, "palestinian territories": 275,
-  "hong kong": 344, "hk": 344,
-  "macau": 446, "macao": 446,
-  "north macedonia": 807, "macedonia": 807,
-  "netherlands": 528, "holland": 528,
-  "new zealand": 554, "nz": 554, "aotearoa": 554,
-  "saudi": 682, "ksa": 682,
-  "south africa": 710, "rsa": 710,
-  "south sudan": 728,
-  "trinidad": 780, "tobago": 780,
-  "papua new guinea": 598, "png": 598,
-  "west sahara": 732, "western sahara": 732,
+  "usa": "840", "us": "840", "america": "840", "united states": "840",
+  "uk": "826", "britain": "826", "great britain": "826", "england": "826",
+  "uae": "784", "emirates": "784",
+  "russia": "643", "russian federation": "643",
+  "south korea": "410", "korea south": "410", "rok": "410",
+  "north korea": "408", "korea north": "408", "dprk": "408",
+  "drc": "180", "dr congo": "180", "democratic republic of congo": "180",
+  "congo": "178", "republic of congo": "178",
+  "ivory coast": "384", "cote d'ivoire": "384", "cote divoire": "384",
+  "czech republic": "203", "czechia": "203",
+  "cabo verde": "132", "cape verde": "132",
+  "eswatini": "748", "swaziland": "748",
+  "myanmar": "104", "burma": "104",
+  "timor-leste": "626", "east timor": "626",
+  "brunei darussalam": "096", "brunei": "096",
+  "lao": "418", "laos": "418",
+  "taiwan": "158", "chinese taipei": "158",
+  "palestine": "275", "palestinian territories": "275",
+  "hong kong": "344", "hk": "344",
+  "macau": "446", "macao": "446",
+  "north macedonia": "807", "macedonia": "807",
+  "netherlands": "528", "holland": "528",
+  "new zealand": "554", "nz": "554", "aotearoa": "554",
+  "saudi": "682", "ksa": "682",
+  "south africa": "710", "rsa": "710",
+  "south sudan": "728",
+  "trinidad": "780", "tobago": "780",
+  "papua new guinea": "598", "png": "598",
+  "west sahara": "732", "western sahara": "732",
+  "french guiana": "GUF", "guyane": "GUF",
+  "kosovo": "KOS",
+  "somaliland": "SOL",
+  "northern cyprus": "NCY", "n. cyprus": "NCY",
 };
 
 // D3 setup
@@ -414,11 +433,43 @@ function fitProjection() {
   countriesGroup.selectAll('.country-path').attr('d', path);
 }
 
-// Load map data
-const DATA_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+// Assign a stable unique ID to each feature for use throughout the app
+function assignFeatureId(feature) {
+  // If it already has a string/number id from TopoJSON, use it
+  if (feature.id != null) return String(feature.id);
+  // For features without an id, use properties.name to assign synthetic IDs
+  const name = (feature.properties && feature.properties.name) || '';
+  if (name === 'N. Cyprus' || name === 'Northern Cyprus') return 'NCY';
+  if (name === 'Kosovo') return 'KOS';
+  if (name === 'Somaliland') return 'SOL';
+  if (name === 'French Guiana') return 'GUF';
+  return 'UNK_' + name;
+}
 
-d3.json(DATA_URL).then(world => {
+function getCountryName(id) {
+  return COUNTRY_NAMES_NUM[id] || COUNTRY_NAMES_NUM[String(id)] || null;
+}
+
+// Load main TopoJSON, then overlay French Guiana from Natural Earth map units
+const TOPO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json';
+const MAP_UNITS_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_map_units.geojson';
+
+Promise.all([
+  d3.json(TOPO_URL),
+  d3.json(MAP_UNITS_URL)
+]).then(([world, mapUnits]) => {
   const countries = topojson.feature(world, world.objects.countries);
+
+  // Assign stable IDs to all features
+  countries.features.forEach(f => { f._uid = assignFeatureId(f); });
+
+  // Find French Guiana from map units and add it as a separate feature
+  const frenchGuiana = mapUnits.features.find(f => f.properties.GU_A3 === 'GUF');
+  if (frenchGuiana) {
+    frenchGuiana._uid = 'GUF';
+    countries.features.push(frenchGuiana);
+  }
+
   countryFeatures = countries.features;
 
   // Build paths
@@ -429,13 +480,13 @@ d3.json(DATA_URL).then(world => {
     .attr('class', 'country-path')
     .attr('d', path)
     .attr('fill', inactiveColor)
-    .attr('data-id', d => d.id)
+    .attr('data-id', d => d._uid)
     .on('click', (event, d) => {
-      toggleCountry(d.id);
+      toggleCountry(d._uid);
     })
     .on('mouseenter', (event, d) => {
-      const name = getCountryName(d.id);
-      tooltip.textContent = name;
+      const name = getCountryName(d._uid);
+      tooltip.textContent = name || d._uid;
       tooltip.style.opacity = '1';
     })
     .on('mousemove', (event) => {
@@ -449,23 +500,19 @@ d3.json(DATA_URL).then(world => {
 
   // Store path references
   countriesGroup.selectAll('.country-path').each(function(d) {
-    countryPathMap[d.id] = this;
+    countryPathMap[d._uid] = this;
   });
 
   fitProjection();
   buildCountryList();
 });
 
-function getCountryName(id) {
-  return COUNTRY_NAMES[id] || `Unknown (${id})`;
-}
-
 function buildCountryList() {
   const list = document.getElementById('country-list');
   // Build sorted list of countries that exist in the map data
   const entries = countryFeatures
-    .map(f => ({ id: f.id, name: getCountryName(f.id) }))
-    .filter(e => e.name && !e.name.startsWith('Unknown'))
+    .map(f => ({ id: f._uid, name: getCountryName(f._uid) }))
+    .filter(e => e.name)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   list.innerHTML = '';
@@ -512,7 +559,7 @@ function toggleCountry(id) {
 function updateMapAndList() {
   // Update map fills
   countriesGroup.selectAll('.country-path')
-    .attr('fill', d => selectedCountries.has(String(d.id)) ? activeColor : inactiveColor);
+    .attr('fill', d => selectedCountries.has(d._uid) ? activeColor : inactiveColor);
 
   // Update checkboxes
   document.querySelectorAll('.country-item').forEach(item => {
